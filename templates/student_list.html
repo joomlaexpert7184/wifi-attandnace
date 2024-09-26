@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Student List</h1>
+    <a class="btn btn-primary mb-3" href="{% url 'add_student' %}">Add Student</a>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Mobile Number</th>
+                <th>MAC Address</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+                <tr>
+                    <td>{{ student.name }}</td>
+                    <td>{{ student.mobile_number }}</td>
+                    <td>{{ student.mac_address }}</td>
+                    <td>
+                        <a class="btn btn-sm btn-warning" href="{% url 'update_student' student.pk %}">Edit</a>
+                        <a class="btn btn-sm btn-danger" href="{% url 'delete_student' student.pk %}">Delete</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a class="btn btn-secondary" href="{% url 'home' %}">Back to Dashboard</a>
+{% endblock %}

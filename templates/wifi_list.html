@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1 class="mb-4">Available WiFi Networks</h1>
+    <div id="loadingMessage" class="alert alert-info text-center">Please wait, we are getting the available WiFi networks...</div>
+    <form id="wifiForm" style="display: none;">
+        <div class="form-group">
+            <label for="wifiNetworks">Select WiFi Network</label>
+            <select class="form-control" id="wifiNetworks">
+                <option selected disabled>Select Wifi Network</option>
+            </select>
+        </div>
+        <div class="d-flex justify-content-between">
+            <button type="button" id="checkDevicesBtn" class="btn btn-primary" style="display: none;">Check Connected Devices</button>
+            <button type="button" id="downloadAttendanceBtn" class="btn btn-success" style="display: none;">Download Attendance</button>
+        </div>
+        <div id="deviceLoadingMessage" class="alert alert-warning mt-3" style="display: none;">Please wait, we are detecting the connected devices for attendance...</div>
+    </form>
+
+    <h2 class="mt-4">Students</h2>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Mobile No</th>
+                <th>MAC Address</th>
+            </tr>
+        </thead>
+        <tbody id="studentsTable">
+            {% for student in students %}
+                <tr data-mac="{{ student.mac_address }}">
+                    <td>{{ student.name }}</td>
+                    <td>{{ student.mobile_number }}</td>
+                    <td>{{ student.mac_address }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2 class="mt-4">Connected Devices</h2>
+    <div id="connectedDevices">
+        <!-- Connected devices will be listed here -->
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch("{% url 'get_wifi_networks' %}")
+                .then(response => response.json())
+                .then(data => {
+                    const wifiNetworks = data.networks;
+                    const wifiSelect = document.getElementById('wifiNetworks');
+                    wifiNetworks.forEach(network => {
+                        const option = document.createElement('option');
+                        option.value = network;
+                        option.text = network;
+                        wifiSelect.appendChild(option);
+                    });
+
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    document.getElementById('wifiForm').style.display = 'block';
+                });
+
+            document.getElementById('wifiNetworks').addEventListener('change', function() {
+                var checkDevicesBtn = document.getElementById('checkDevicesBtn');
+                checkDevicesBtn.style.display = 'block';
+            });
+
+            document.getElementById('checkDevicesBtn').addEventListener('click', function() {
+                var selectedNetwork = document.getElementById('wifiNetworks').value;
+                showDeviceLoadingMessage();
+                fetchConnectedDevices(selectedNetwork);
+            });
+
+            document.getElementById('downloadAttendanceBtn').addEventListener('click', function() {
+                downloadAttendance();
+            });
+        });
+
+        function fetchConnectedDevices(network) {
+            fetch("{% url 'fetch_connected_devices' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ 'network': network })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideDeviceLoadingMessage();
+                displayConnectedDevices(data.devices);
+                highlightConnectedStudents(data.devices);
+                rearrangeStudentsTable();
+                document.getElementById('downloadAttendanceBtn').style.display = 'block';
+            });
+        }
+
+        function showDeviceLoadingMessage() {
+            document.getElementById('deviceLoadingMessage').style.display = 'block';
+        }
+
+        function hideDeviceLoadingMessage() {
+            document.getElementById('deviceLoadingMessage').style.display = 'none';
+        }
+
+        function displayConnectedDevices(devices) {
+            var connectedDevicesDiv = document.getElementById('connectedDevices');
+            connectedDevicesDiv.innerHTML = '';
+            if (devices.length > 0) {
+                var ul = document.createElement('ul');
+                ul.className = 'list-group';
+                devices.forEach(device => {
+                    var li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.textContent = device;
+                    ul.appendChild(li);
+                });
+                connectedDevicesDiv.appendChild(ul);
+            } else {
+                connectedDevicesDiv.textContent = 'No devices connected.';
+            }
+        }
+
+        function highlightConnectedStudents(devices) {
+            const studentsTable = document.getElementById('studentsTable');
+            const rows = studentsTable.getElementsByTagName('tr');
+            const connectedMacs = devices.map(device => device.split('MAC: ')[1].trim());
+
+            for (let row of rows) {
+                const mac = row.getAttribute('data-mac');
+                if (connectedMacs.includes(mac)) {
+                    row.classList.add('connected');
+                    row.classList.remove('not-connected');
+                } else {
+                    row.classList.add('not-connected');
+                    row.classList.remove('connected');
+                }
+            }
+        }
+
+        function rearrangeStudentsTable() {
+            const studentsTable = document.getElementById('studentsTable');
+            const rows = Array.from(studentsTable.getElementsByTagName('tr'));
+            const connectedRows = rows.filter(row => row.classList.contains('connected'));
+            const notConnectedRows = rows.filter(row => row.classList.contains('not-connected'));
+
+            studentsTable.innerHTML = '';
+            connectedRows.forEach(row => studentsTable.appendChild(row));
+            notConnectedRows.forEach(row => studentsTable.appendChild(row));
+
+            window.scrollTo({
+                top: studentsTable.offsetTop,
+                behavior: 'smooth'
+            });
+        }
+
+        function downloadAttendance() {
+            window.location.href = "{% url 'download_attendance' %}";
+        }
+    </script>
+    <style>
+        .connected {
+            background-color: green;
+            color: #FFF;
+        }
+        .not-connected {
+            background-color: red;
+            color: #FFF;
+        }
+        .alert {
+            margin-top: 10px;
+        }
+        #downloadAttendanceBtn {
+            margin-left: 10px; /* Adjust the margin as needed */
+        }
+    </style>
+{% endblock %}

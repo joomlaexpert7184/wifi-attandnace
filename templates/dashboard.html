@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container text-center mt-5">
+    <h1 class="mb-4">Wifi Attendance Project Dashboard</h1>
+    <p id="text_to_speak" class="lead">{{ text_to_read|linebreaks }}</p>
+</div>
+<style>
+    .container {
+        max-width: 800px;
+        margin: auto;
+        padding: 20px;
+    }
+    .list-group-item {
+        border: none;
+        padding: 10px 20px;
+        background: #f8f9fa;
+    }
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+    }
+</style>
+<script>
+    function highlightText() {
+        const textElement = document.getElementById("text_to_speak");
+        const text = textElement.innerText.split("\n");
+        let index = 0;
+        
+        const interval = setInterval(() => {
+            if (index >= text.length) {
+                clearInterval(interval);
+                return;
+            }
+            textElement.innerHTML = text.map((line, i) => i === index ? `<span style="background-color: yellow;">${line}</span>` : line).join("<br>");
+            index++;
+        }, 1000); // Adjust the timing as needed
+    }
+
+    highlightText();
+</script>
+{% endblock %}
